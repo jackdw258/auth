@@ -3,6 +3,7 @@ from discord.ext import commands
 from flask import Flask, request, redirect
 import requests
 import os
+from threading import Thread
 
 # Load environment variables
 TOKEN = os.getenv("TOKEN")
@@ -80,13 +81,12 @@ def callback():
 async def on_ready():
     print(f"✅ Bot is online! Logged in as {bot.user}")
 
-if __name__ == "__main__":
-    from threading import Thread
-    def run():
-        app.run(host="0.0.0.0", port=5000)
+# Run Flask app in a separate thread
+def run():
+    app.run(host="0.0.0.0", port=5000)
 
-    # Run Flask in a separate thread so the bot can run concurrently
-    Thread(target=run).start()
+# Start Flask in a separate thread
+Thread(target=run).start()
 
-    # Start the bot
-    bot.run(TOKEN)
+# Start the bot
+bot.run(TOKEN)
