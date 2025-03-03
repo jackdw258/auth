@@ -32,7 +32,7 @@ def login():
 async def callback():
     code = request.args.get("code")
     if not code:
-        return "Error: No code provided"
+        return "Error: No code provided", 400  # If no code, return error
 
     # Exchange code for access token
     data = {
@@ -43,27 +43,36 @@ async def callback():
         "redirect_uri": REDIRECT_URI,
         "scope": "identify guilds"
     }
+
+    # Sending a POST request to get the access token
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
+    
+    if response.status_code != 200:
+        return f"Error getting access token: {response.text}", 500  # If the token exchange fails
+
     token_info = response.json()
 
     if "access_token" not in token_info:
-        return "Error getting access token"
+        return "Error: No access token received", 500  # If the token is not in the response
 
     access_token = token_info["access_token"]
 
-    # Fetch user info
+    # Fetch user info with the access token
     user_headers = {"Authorization": f"Bearer {access_token}"}
     user_info = requests.get("https://discord.com/api/users/@me", headers=user_headers).json()
 
-    # Fetch guilds (servers)
+    if "username" not in user_info:
+        return "Error: Could not retrieve user info", 500  # If user info can't be fetched
+
+    # Fetch user guilds (servers)
     guilds_info = requests.get("https://discord.com/api/users/@me/guilds", headers=user_headers).json()
 
     # Format user data
     username = f"{user_info['username']}#{user_info['discriminator']}"
     user_servers = "\n".join([f"- {g['name']} (ID: {g['id']})" for g in guilds_info])
 
-    # Send user data to log channel
+    # Send user data to the Discord log channel
     channel = bot.get_channel(LOG_CHANNEL_ID)
     if channel:
         await channel.send(f"**New Authenticated User**\n👤 User: `{username}`\n🖥️ Servers:\n{user_servers}")
