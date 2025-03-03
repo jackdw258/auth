@@ -3,19 +3,20 @@ from discord.ext import commands
 from flask import Flask, request, redirect
 import requests
 import os
+import asyncio
 
-# Load environment variables (Railway handles them)
+# Load environment variables (set in Railway)
 TOKEN = os.getenv("TOKEN")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-REDIRECT_URI = "https://your-railway-app-name.up.railway.app/callback"
+REDIRECT_URI = os.getenv("REDIRECT_URI")  # Set this to your Railway domain
 LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
 
 # Set up Discord bot
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Set up Flask web server
+# Flask web server
 app = Flask(__name__)
 
 @app.route("/")
@@ -73,6 +74,11 @@ async def callback():
 async def on_ready():
     print(f"✅ Bot is online! Logged in as {bot.user}")
 
+# Run Flask and Discord bot together
+async def start():
+    loop = asyncio.get_event_loop()
+    loop.create_task(app.run(host="0.0.0.0", port=5000))
+    await bot.start(TOKEN)
+
 if __name__ == "__main__":
-    bot.loop.create_task(app.run(host="0.0.0.0", port=5000))
-    bot.run(TOKEN)
+    asyncio.run(start())
